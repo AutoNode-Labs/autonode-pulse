@@ -1,0 +1,67 @@
+name: 'AutoNode Pulse'
+description: 'Architectural Auditing & LLM-Readiness score — CI/CD quality gate for web pages'
+author: 'AutoNode-Labs'
+
+branding:
+  icon: 'activity'
+  color: 'blue'
+
+inputs:
+  url:
+    description: 'Target URL to audit (must be https://)'
+    required: true
+  threshold:
+    description: 'Minimum acceptable Pulse Score (0–100). Pipeline fails if score is below.'
+    required: false
+    default: '70'
+
+outputs:
+  score:
+    description: 'Overall Pulse Score (0–100)'
+    value: ${{ steps.audit.outputs.score }}
+  grade:
+    description: 'Letter grade (A+, A, B+, B, C, D, F)'
+    value: ${{ steps.audit.outputs.grade }}
+  passed:
+    description: '"true" if score ≥ threshold, "false" otherwise'
+    value: ${{ steps.audit.outputs.passed }}
+
+runs:
+  using: 'composite'
+  steps:
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '20'
+        cache: 'npm'
+        cache-dependency-path: ${{ github.action_path }}/package-lock.json
+
+    - name: Install dependencies
+      shell: bash
+      run: npm ci --prefix "${{ github.action_path }}" --omit=dev
+
+    - name: Run audit
+      id: audit
+      shell: bash
+      env:
+        TARGET_URL: ${{ inputs.url }}
+        THRESHOLD:  ${{ inputs.threshold }}
+      run: |
+        CLI="${{ github.action_path }}/bin/index.js"
+
+        # ── Human-readable report (shown in Actions UI) ────────────────────
+        node "$CLI" "$TARGET_URL" --threshold "$THRESHOLD"
+        EXIT_CODE=$?
+
+        # ── Structured outputs (second call — same URL, result is fast) ────
+        JSON=$(node "$CLI" "$TARGET_URL" --json 2>/dev/null)
+        SCORE=$(echo "$JSON" | jq -r '.pulseScore.overall')
+        GRADE=$(echo "$JSON" | jq -r '.pulseScore.grade')
+        PASSED=$([ $EXIT_CODE -eq 0 ] && echo "true" || echo "false")
+
+        echo "score=$SCORE"   >> "$GITHUB_OUTPUT"
+        echo "grade=$GRADE"   >> "$GITHUB_OUTPUT"
+        echo "passed=$PASSED" >> "$GITHUB_OUTPUT"
+
+        # Propagate the CLI exit code so the step fails when score < threshold
+        exit $EXIT_CODE

@@ -1,0 +1,87 @@
+name: Quality Gate — Example
+
+# Bu dosya, BAŞKA bir projenin kendi reposuna koyacağı örnek workflow'dur.
+# AutoNode Pulse'u GitHub Action olarak kullanmak için:
+#
+#   uses: AutoNode-Labs/autonode-pulse@main
+#
+# şeklinde referans verilir — paket yüklemeye gerek yoktur.
+
+on:
+  # ── Deploy sonrası site audit ─────────────────────────────────────────────
+  deployment_status:          # Vercel / Netlify / Railway deploy event'i
+  workflow_dispatch:          # Elle tetikleme
+  schedule:
+    - cron: '0 9 * * 1'      # Her Pazartesi 09:00 UTC otomatik audit
+
+jobs:
+  # ── Senaryo 1: Deployment sonrası kalite kapısı ──────────────────────────
+  post-deploy-audit:
+    name: Post-Deploy Quality Gate
+    runs-on: ubuntu-latest
+    # Sadece başarılı deploy'dan sonra çalış (Vercel/Netlify webhook)
+    if: github.event_name != 'deployment_status' || github.event.deployment_status.state == 'success'
+
+    steps:
+      - name: Audit deployed site
+        id: pulse
+        uses: AutoNode-Labs/autonode-pulse@main
+        with:
+          url:       'https://your-site.com'   # ← kendi URL'ini yaz
+          threshold: '75'                       # ← minimum kabul edilebilir skor
+
+      - name: Block merge if audit fails
+        if: steps.pulse.outputs.passed == 'false'
+        run: |
+          echo "::error::Pulse Score ${{ steps.pulse.outputs.score }}/100 is below threshold 75."
+          echo "::error::Fix the issues above before merging."
+          exit 1
+
+  # ── Senaryo 2: PR'da önizleme URL'ini audit et ───────────────────────────
+  pr-preview-audit:
+    name: Preview URL Audit
+    runs-on: ubuntu-latest
+    if: github.event_name == 'pull_request'
+
+    steps:
+      - name: Audit Vercel preview URL
+        uses: AutoNode-Labs/autonode-pulse@main
+        with:
+          # Vercel preview URL'ini PR ortam değişkeninden al
+          url:       ${{ vars.VERCEL_PREVIEW_URL || 'https://your-site.com' }}
+          threshold: '60'   # Preview'da biraz daha esnek threshold
+
+  # ── Senaryo 3: Haftalık otomatik audit + Slack bildirimi ─────────────────
+  weekly-audit:
+    name: Weekly Site Health Report
+    runs-on: ubuntu-latest
+    if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
+
+    steps:
+      - name: Run weekly audit
+        id: pulse
+        uses: AutoNode-Labs/autonode-pulse@main
+        with:
+          url:       'https://your-site.com'
+          threshold: '70'
+        continue-on-error: true   # Skor düşük olsa bile Slack'e bildiririz
+
+      - name: Notify Slack
+        if: always()
+        uses: slackapi/slack-github-action@v1
+        with:
+          payload: |
+            {
+              "text": "AutoNode Pulse — Weekly Audit",
+              "blocks": [
+                {
+                  "type": "section",
+                  "text": {
+                    "type": "mrkdwn",
+                    "text": "*Pulse Score:* ${{ steps.pulse.outputs.score }}/100 (${{ steps.pulse.outputs.grade }})\n*Status:* ${{ steps.pulse.outputs.passed == 'true' && '✅ Passed' || '❌ Failed' }}"
+                  }
+                }
+              ]
+            }
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}

@@ -1,0 +1,49 @@
+name: Self Audit
+
+# AutoNode Pulse'un kendi CI pipeline'ı.
+# Her push ve PR'da örnek bir siteyi audit eder ve sonuçları
+# step summary olarak Actions UI'da gösterir.
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      url:
+        description: 'Audit edilecek URL'
+        required: false
+        default: 'https://aixsap.com'
+      threshold:
+        description: 'Minimum Pulse Score'
+        required: false
+        default: '70'
+
+jobs:
+  audit:
+    name: Pulse Audit
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Run AutoNode Pulse
+        id: pulse
+        uses: AutoNode-Labs/autonode-pulse@main
+        with:
+          url:       ${{ github.event.inputs.url || 'https://aixsap.com' }}
+          threshold: ${{ github.event.inputs.threshold || '70' }}
+
+      - name: Write Job Summary
+        if: always()
+        run: |
+          echo "## AutoNode Pulse Results" >> $GITHUB_STEP_SUMMARY
+          echo ""                          >> $GITHUB_STEP_SUMMARY
+          echo "| Field     | Value |"    >> $GITHUB_STEP_SUMMARY
+          echo "|-----------|-------|"    >> $GITHUB_STEP_SUMMARY
+          echo "| Score     | ${{ steps.pulse.outputs.score }} / 100 |" >> $GITHUB_STEP_SUMMARY
+          echo "| Grade     | ${{ steps.pulse.outputs.grade }} |"       >> $GITHUB_STEP_SUMMARY
+          echo "| Threshold | ${{ github.event.inputs.threshold || '70' }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Passed    | ${{ steps.pulse.outputs.passed }} |"      >> $GITHUB_STEP_SUMMARY
