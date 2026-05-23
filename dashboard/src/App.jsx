@@ -641,9 +641,14 @@ export default function App() {
               Overall Pulse Score
             </p>
             <CircularGauge score={pulseScore.overall} grade={pulseScore.grade} />
-            {pulseScore.summary && (
+            {pulseScore.summary?.topRecommendations?.[0] && (
               <p className="font-mono text-xs text-slate-500 text-center max-w-[200px] leading-relaxed">
-                {pulseScore.summary}
+                {pulseScore.summary.topRecommendations[0]}
+              </p>
+            )}
+            {pulseScore.summary?.criticalIssues?.length > 0 && (
+              <p className="font-mono text-xs text-center leading-relaxed mt-1" style={{ color: '#ff4a4a' }}>
+                {pulseScore.summary.criticalIssues[0]}
               </p>
             )}
           </div>
