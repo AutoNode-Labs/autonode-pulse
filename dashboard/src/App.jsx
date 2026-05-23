@@ -1,9 +1,10 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 
 // Base URL for the backend API.
-// Empty string → relative URL, handled by Vite proxy (dev) or Nginx proxy (Docker).
-// Set VITE_API_URL in production to the deployed API origin (e.g. https://api.pulse.autonode.tech).
-const API_BASE = import.meta.env.VITE_API_URL ?? '';
+// Vite bakes VITE_API_URL into the bundle at build time. Empty fallback would
+// produce relative URLs that break on Vercel (frontend ≠ backend origin).
+// Explicit localhost:3000 fallback keeps local dev working without a .env file.
+const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000';
 
 // ── Constants ──────────────────────────────────────────────────────────────
 
@@ -469,7 +470,7 @@ export default function App() {
 
     // API call — result held in ref; transition fires when terminal also finishes
     try {
-      const res = await fetch(`${API_BASE}/api/v1/audit`, {
+      const res = await fetch(`${API_BASE_URL}/api/v1/audit`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ targetUrl: target }),
