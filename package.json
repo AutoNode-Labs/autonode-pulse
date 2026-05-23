@@ -1,0 +1,19 @@
+{
+  "name": "autonode-pulse",
+  "version": "1.0.0",
+  "description": "Enterprise-grade Architectural Auditing & LLM-Readiness Microservice",
+  "type": "module",
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "scripts": {
+    "start": "node src/server.js",
+    "dev": "node --watch src/server.js"
+  },
+  "dependencies": {
+    "axios": "^1.7.2",
+    "cheerio": "^1.0.0",
+    "express": "^4.19.2",
+    "helmet": "^7.1.0"
+  }
+}
