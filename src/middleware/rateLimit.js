@@ -22,13 +22,13 @@ const rateLimitResponse = (code, message) => ({
 
 export const standardLimiter = rateLimit({
   windowMs: 60 * 1000,
-  max: (req) => (req.apiKey ? 60 : 10),
+  max: (req) => (req.apiKey ? 60 : 5),
   keyGenerator: (req) => req.apiKey ?? req.ip,
   standardHeaders: true,
   legacyHeaders: false,
   message: rateLimitResponse(
     'RATE_LIMITED',
-    'Too many requests — authenticated clients get 60 req/min, anonymous clients get 10 req/min'
+    'Too many requests — authenticated clients get 60 req/min, anonymous clients get 5 req/min'
   ),
 });
 

@@ -1,20 +1,44 @@
 /**
- * AutoNode Pulse — Express server entry point (Phase 2).
+ * AutoNode Pulse — Express server entry point.
  */
 
 import express from 'express';
 import helmet  from 'helmet';
+import cors    from 'cors';
 import { getRedisClient } from './cache/redis.client.js';
 import auditRoutes from './routes/audit.routes.js';
 
 const app  = express();
 const PORT = process.env.PORT ?? 3000;
 
+// CORS — reads a comma-separated ALLOWED_ORIGINS env var.
+// No-origin requests (server-to-server, curl, CI/CD) are always permitted.
+const ALLOWED_ORIGINS = new Set(
+  (process.env.ALLOWED_ORIGINS ?? 'http://localhost:3000,http://localhost:5173')
+    .split(',')
+    .map(o => o.trim())
+    .filter(Boolean)
+);
+
+const corsOptions = {
+  origin: (origin, callback) => {
+    // No-origin requests (server-to-server, curl, CI/CD) always pass.
+    // Disallowed origins get callback(null, false) — cors omits ACAO header;
+    // browsers enforce the block. Do NOT throw here; it bubbles to 500.
+    callback(null, !origin || ALLOWED_ORIGINS.has(origin));
+  },
+  methods: ['GET', 'POST'],
+  allowedHeaders: ['Content-Type', 'X-API-Key'],
+  exposedHeaders: ['RateLimit-Limit', 'RateLimit-Remaining', 'RateLimit-Reset'],
+  maxAge: 86400,
+};
+
 // Initialise Redis eagerly so the first request isn't penalised by the
 // connection handshake. Failure is logged but does not abort startup.
 getRedisClient();
 
 app.use(helmet());
+app.use(cors(corsOptions));
 app.use(express.json({ limit: '50kb' }));
 
 app.get('/health', (_req, res) => {
