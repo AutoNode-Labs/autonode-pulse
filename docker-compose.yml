@@ -1,0 +1,90 @@
+# ── AutoNode Pulse — Local Staging Stack ─────────────────────────────────
+# Mirrors the production topology exactly:
+#   dashboard (Nginx) → api (Node.js) → redis
+#
+# Usage:
+#   docker compose up --build         # first run
+#   docker compose up                 # subsequent runs (no rebuild)
+#   docker compose down -v            # tear down including Redis volume
+
+services:
+
+  # ── Redis ────────────────────────────────────────────────────────────────
+  # Audit result cache. The API degrades gracefully if this is unavailable,
+  # but response times will be higher on repeated audits.
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    volumes:
+      - redis_data:/data
+    command: redis-server --appendonly yes
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - pulse_internal
+
+  # ── Backend API ──────────────────────────────────────────────────────────
+  # Express microservice. Exposed on host port 3000 for direct curl testing.
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    environment:
+      NODE_ENV: production
+      PORT: 3000
+      # Browser requests arrive via Nginx (localhost:5173), so the Origin header
+      # the API sees is http://localhost:5173 — include it here.
+      ALLOWED_ORIGINS: "http://localhost:5173"
+      REDIS_URL: redis://redis:6379
+      REQUIRE_AUTH: "false"
+      # Uncomment and set for authenticated mode:
+      # API_KEYS: "your-secret-key"
+    depends_on:
+      redis:
+        condition: service_healthy
+    healthcheck:
+      # Uses Node's built-in fetch (Node 18+) — no extra tooling required.
+      test: >
+        CMD node -e
+        "fetch('http://localhost:3000/health')
+          .then(r => r.ok ? process.exit(0) : process.exit(1))
+          .catch(() => process.exit(1))"
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 15s
+    networks:
+      - pulse_internal
+
+  # ── Dashboard ────────────────────────────────────────────────────────────
+  # Nginx serves the React SPA and proxies /api/* to the api service.
+  # Access at http://localhost:5173 — identical UX to Vite dev server.
+  dashboard:
+    build:
+      context: ./dashboard
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    ports:
+      - "5173:80"
+    depends_on:
+      api:
+        condition: service_healthy
+    networks:
+      - pulse_internal
+
+networks:
+  pulse_internal:
+    driver: bridge
+    # Isolated bridge — containers are not reachable from other Docker networks
+    # or the host unless ports are explicitly published above.
+
+volumes:
+  redis_data:
+    # Named volume persists Redis data across `docker compose down` restarts.
+    # Use `docker compose down -v` to wipe it during fresh staging resets.

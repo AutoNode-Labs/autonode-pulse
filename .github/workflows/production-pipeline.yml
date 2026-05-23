@@ -1,0 +1,82 @@
+name: Production Pipeline
+
+# Triggers on every push to main and on all PRs targeting main.
+# PRs run the full validation matrix before merge; pushes additionally
+# run the AutoNode Pulse self-audit as a post-deploy health check.
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+
+  # ── Validation Matrix ───────────────────────────────────────────────────
+  # Ensures the project builds cleanly across the Node.js versions we support.
+  # Frontend build is the primary pre-deployment gate — a broken Vite build
+  # means Vercel would deploy a blank page; catch it here first.
+  validate:
+    name: Validate — Node.js ${{ matrix.node }}
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        node: ['20', '22', '24']
+      fail-fast: false   # report failures for all versions, not just the first
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js ${{ matrix.node }}
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node }}
+
+      - name: Install API dependencies
+        run: npm ci
+
+      - name: Install Dashboard dependencies
+        run: npm ci
+        working-directory: dashboard
+
+      - name: Build Dashboard
+        run: npm run build
+        working-directory: dashboard
+        env:
+          # Bake the production API URL into the bundle during CI so the build
+          # output is identical to what Vercel would produce on deployment.
+          VITE_API_URL: https://api.pulse.autonode.tech
+
+  # ── AutoNode Pulse Self-Audit ───────────────────────────────────────────
+  # Uses our own GitHub Action to audit a live site — dogfooding in CI.
+  # Runs only on pushes to main (not on PRs — no deployed URL to audit yet).
+  # continue-on-error: true so a low score notifies but does not block main.
+  self-audit:
+    name: Self-Audit (pulse.autonode.tech)
+    runs-on: ubuntu-latest
+    needs: validate
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Run AutoNode Pulse
+        id: pulse
+        uses: AutoNode-Labs/autonode-pulse@main
+        with:
+          url: 'https://aixsap.com'
+          threshold: '70'
+        continue-on-error: true
+
+      - name: Write Job Summary
+        if: always()
+        run: |
+          echo "## AutoNode Pulse — Self-Audit" >> $GITHUB_STEP_SUMMARY
+          echo ""                               >> $GITHUB_STEP_SUMMARY
+          echo "| Metric    | Value |"          >> $GITHUB_STEP_SUMMARY
+          echo "|-----------|-------|"          >> $GITHUB_STEP_SUMMARY
+          echo "| Score     | ${{ steps.pulse.outputs.score }} / 100 |" >> $GITHUB_STEP_SUMMARY
+          echo "| Grade     | ${{ steps.pulse.outputs.grade }} |"       >> $GITHUB_STEP_SUMMARY
+          echo "| Threshold | 70 |"             >> $GITHUB_STEP_SUMMARY
+          echo "| Passed    | ${{ steps.pulse.outputs.passed }} |"      >> $GITHUB_STEP_SUMMARY

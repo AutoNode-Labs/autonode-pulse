@@ -1,0 +1,19 @@
+# Dependencies — rebuilt inside the container from package-lock.json
+node_modules/
+
+# Frontend sub-project — has its own Dockerfile
+dashboard/
+
+# Git history — not needed in the image
+.git/
+.github/
+
+# Local environment files — secrets must be injected at runtime, never baked in
+.env
+.env.*
+
+# Editor and OS artifacts
+.DS_Store
+*.iml
+.idea/
+.vscode/

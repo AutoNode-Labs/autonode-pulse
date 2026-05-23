@@ -1,5 +1,10 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 
+// Base URL for the backend API.
+// Empty string → relative URL, handled by Vite proxy (dev) or Nginx proxy (Docker).
+// Set VITE_API_URL in production to the deployed API origin (e.g. https://api.pulse.autonode.tech).
+const API_BASE = import.meta.env.VITE_API_URL ?? '';
+
 // ── Constants ──────────────────────────────────────────────────────────────
 
 const CIRCUMFERENCE = 2 * Math.PI * 52; // matches r=52 in CircularGauge SVG
@@ -464,7 +469,7 @@ export default function App() {
 
     // API call — result held in ref; transition fires when terminal also finishes
     try {
-      const res = await fetch('/api/v1/audit', {
+      const res = await fetch(`${API_BASE}/api/v1/audit`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ targetUrl: target }),

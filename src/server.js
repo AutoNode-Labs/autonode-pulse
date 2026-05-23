@@ -11,6 +11,11 @@ import auditRoutes from './routes/audit.routes.js';
 const app  = express();
 const PORT = process.env.PORT ?? 3000;
 
+// Trust the first reverse proxy (Render, AWS ALB, Nginx) so that req.ip
+// reflects the real client IP — critical for correct IP-based rate limiting.
+// Set to the number of trusted proxy hops in your infra (1 = single proxy).
+app.set('trust proxy', 1);
+
 // CORS — reads a comma-separated ALLOWED_ORIGINS env var.
 // No-origin requests (server-to-server, curl, CI/CD) are always permitted.
 const ALLOWED_ORIGINS = new Set(
@@ -62,11 +67,26 @@ app.use((err, _req, res, _next) => {
   });
 });
 
-app.listen(PORT, () => {
+const server = app.listen(PORT, () => {
   console.log(`AutoNode Pulse v2 listening on port ${PORT}`);
   console.log(`Sync:  POST http://localhost:${PORT}/api/v1/audit`);
   console.log(`Async: POST http://localhost:${PORT}/api/v1/audit/async`);
   console.log(`Jobs:  GET  http://localhost:${PORT}/api/v1/audit/jobs/:id`);
 });
+
+// Graceful shutdown — allows in-flight requests to complete before the
+// container exits. Required for zero-downtime deploys on Docker / K8s / Render.
+function shutdown(signal) {
+  console.log(`[${signal}] Shutting down gracefully…`);
+  server.close(() => {
+    console.log('All connections closed. Exiting.');
+    process.exit(0);
+  });
+  // Force-exit if connections linger beyond 10 s
+  setTimeout(() => process.exit(1), 10_000).unref();
+}
+
+process.on('SIGTERM', () => shutdown('SIGTERM'));
+process.on('SIGINT',  () => shutdown('SIGINT'));
 
 export default app;
