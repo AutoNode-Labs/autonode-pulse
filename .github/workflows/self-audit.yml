@@ -14,7 +14,7 @@ on:
       url:
         description: 'Audit edilecek URL'
         required: false
-        default: 'https://aixsap.com'
+        default: 'https://pulse.autonode.tech'
       threshold:
         description: 'Minimum Pulse Score'
         required: false
@@ -33,7 +33,7 @@ jobs:
         id: pulse
         uses: AutoNode-Labs/autonode-pulse@main
         with:
-          url:       ${{ github.event.inputs.url || 'https://aixsap.com' }}
+          url:       ${{ github.event.inputs.url || 'https://pulse.autonode.tech' }}
           threshold: ${{ github.event.inputs.threshold || '70' }}
 
       - name: Write Job Summary

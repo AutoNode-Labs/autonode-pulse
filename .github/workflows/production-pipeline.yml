@@ -65,7 +65,7 @@ jobs:
         id: pulse
         uses: AutoNode-Labs/autonode-pulse@main
         with:
-          url: 'https://aixsap.com'
+          url: 'https://pulse.autonode.tech'
           threshold: '70'
         continue-on-error: true
 
