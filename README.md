@@ -287,13 +287,13 @@ To demonstrate real-world impact, `autonode-pulse` was run against `https://aixs
 | Technical SEO | 15/15 (100%) | 15/15 (100%) | ✅ Unchanged — already optimal |
 | Enterprise SEO | 32/35 (91%) | 32/35 (91%) | ✅ Unchanged — JSON-LD present; meta description slightly short |
 | LLM Readiness | 21.5/30 (72%) | 21.5/30 (72%) | ⚠️ Unchanged — `GPTBot` / `CCBot` intentionally blocked by design |
-| Infrastructure Security | 10/35 (29%) | 33/35 (94%) | ✅ Hardened — `X-Powered-By` stripped; HSTS, X-Frame-Options, Referrer-Policy, Permissions-Policy injected via Cloudflare Transform Rules |
+| Infrastructure Security | 10/35 (29%) | 35/35 (100%) | ✅ Hardened — `X-Powered-By` stripped; HSTS, CSP (`frame-ancestors 'none'`), X-Frame-Options, Referrer-Policy, Permissions-Policy injected via Cloudflare Transform Rules |
 
-**Remediation:** Cloudflare Transform Rules were used to strip `X-Powered-By` and inject HSTS, `X-Frame-Options`, `X-Content-Type-Options`, `Referrer-Policy`, and `Permissions-Policy`. Security score rose from 29% → 94%.
+**Remediation:** Cloudflare Transform Rules were used to strip `X-Powered-By` and inject HSTS, `Content-Security-Policy`, `X-Frame-Options`, `X-Content-Type-Options`, `Referrer-Policy`, and `Permissions-Policy`. Security score rose from 29% → **100%**.
 
-**After hardening — 88/100 (Grade: A-)** · Live-verified `2026-05-24`
+**After hardening — 90/100 (Grade: A)** · Live-verified `2026-05-25`
 
-> **Remaining gap (−10 pts):** `Content-Security-Policy` header is absent. Adding a CSP policy would push the score to ~98/100 (A+). The intentional `GPTBot` / `CCBot` blocks in `robots.txt` account for the LLM Readiness gap and are a deliberate architectural choice, not a deficiency.
+> **Remaining gap (−10 pts):** The intentional `GPTBot` / `CCBot` / `Google-Extended` blocks in `robots.txt` account for the LLM Readiness gap (72%) and are a deliberate architectural choice — training crawlers excluded, real-time agents (`ChatGPT-User`, `Claude-Web`, `PerplexityBot`) permitted.
 
 ---
 
