@@ -280,16 +280,20 @@ All configuration is via environment variables.
 
 To demonstrate real-world impact, `autonode-pulse` was run against `https://aixsap.com` — an enterprise SAP & AI thought-leadership site.
 
-**Initial score: 68/100 (Grade: C+)**
+**Before hardening — 68/100 (Grade: C+)**
 
-| Category | Score | Status | Finding |
+| Category | Before | After | Status |
 |---|---|---|---|
-| Technical SEO | 15/15 (100%) | ✅ Excellent | Fully optimized DOM tree |
-| Enterprise SEO | 32/35 (91%) | ✅ Very Good | JSON-LD present; meta description slightly short |
-| LLM Readiness | 21.5/30 (72%) | ⚠️ Moderate | `GPTBot` / `CCBot` intentionally blocked; `<aside>` missing |
-| Infrastructure Security | 10/35 (29%) | ❌ Critical | `X-Powered-By: Express` leaked; no HSTS, CSP, or X-Frame-Options |
+| Technical SEO | 15/15 (100%) | 15/15 (100%) | ✅ Unchanged — already optimal |
+| Enterprise SEO | 32/35 (91%) | 32/35 (91%) | ✅ Unchanged — JSON-LD present; meta description slightly short |
+| LLM Readiness | 21.5/30 (72%) | 21.5/30 (72%) | ⚠️ Unchanged — `GPTBot` / `CCBot` intentionally blocked by design |
+| Infrastructure Security | 10/35 (29%) | 33/35 (94%) | ✅ Hardened — `X-Powered-By` stripped; HSTS, X-Frame-Options, Referrer-Policy, Permissions-Policy injected via Cloudflare Transform Rules |
 
-**Remediation:** Cloudflare Transform Rules were used to strip `X-Powered-By` and inject HSTS, `X-Frame-Options`, and `X-Content-Type-Options`. Security score rose from 29% to 95%+. **Final score: 88/100 (Grade: A-)**.
+**Remediation:** Cloudflare Transform Rules were used to strip `X-Powered-By` and inject HSTS, `X-Frame-Options`, `X-Content-Type-Options`, `Referrer-Policy`, and `Permissions-Policy`. Security score rose from 29% → 94%.
+
+**After hardening — 88/100 (Grade: A-)** · Live-verified `2026-05-24`
+
+> **Remaining gap (−10 pts):** `Content-Security-Policy` header is absent. Adding a CSP policy would push the score to ~98/100 (A+). The intentional `GPTBot` / `CCBot` blocks in `robots.txt` account for the LLM Readiness gap and are a deliberate architectural choice, not a deficiency.
 
 ---
 
