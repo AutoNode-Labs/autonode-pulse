@@ -1,7 +1,7 @@
 import { Router } from 'express';
 import { requireApiKey }             from '../middleware/auth.js';
 import { standardLimiter, asyncLimiter } from '../middleware/rateLimit.js';
-import { validateAuditRequest, validateAsyncAuditRequest } from '../middleware/validate.js';
+import { validateAuditRequest, validateAsyncAuditRequest, normalizeFreshParam } from '../middleware/validate.js';
 import { runAudit, runAsyncAudit, getJobStatus } from '../controllers/audit.controller.js';
 
 const router = Router();
@@ -14,7 +14,7 @@ router.use(requireApiKey);
  * Synchronous audit — blocks until complete, returns full scorecard.
  * Supports ?fresh=true to bypass cache.
  */
-router.post('/audit', standardLimiter, validateAuditRequest, runAudit);
+router.post('/audit', normalizeFreshParam, standardLimiter, validateAuditRequest, runAudit);
 
 /**
  * POST /api/v1/audit/async

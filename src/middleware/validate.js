@@ -57,6 +57,27 @@ function parseAndValidateUrl(raw, allowedProtocols, fieldName) {
   return { url: trimmed };
 }
 
+/**
+ * Restricts cache-bypass to authenticated callers only.
+ *
+ * Threat: an anonymous user appending ?fresh=true to every request forces a
+ * full origin fetch each time, effectively nullifying the 5 req/min rate limit
+ * — each call is expensive rather than a cheap cache hit.
+ *
+ * Fix: silently strip the fresh flag for unauthenticated requests so they
+ * always fall through to the cache lookup. No error is returned — leaking
+ * the existence of a privileged parameter is itself an information disclosure.
+ *
+ * Must run after requireApiKey (needs req.apiKey) and before the controller
+ * (which reads req.query.fresh to decide whether to skip the cache).
+ */
+export function normalizeFreshParam(req, _res, next) {
+  if (req.apiKey === null && req.query.fresh === 'true') {
+    delete req.query.fresh;
+  }
+  next();
+}
+
 export function validateAuditRequest(req, res, next) {
   const { targetUrl } = req.body ?? {};
 
