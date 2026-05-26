@@ -46,20 +46,21 @@ runs:
         THRESHOLD:  ${{ inputs.threshold }}
       run: |
         CLI="${{ github.action_path }}/bin/index.js"
+        JSON_FILE=$(mktemp)
 
-        # ── Human-readable report (shown in Actions UI) ────────────────────
-        node "$CLI" "$TARGET_URL" --threshold "$THRESHOLD"
+        # Single fetch: human-readable report to stdout + JSON to temp file
+        node "$CLI" "$TARGET_URL" --threshold "$THRESHOLD" --json-out "$JSON_FILE"
         EXIT_CODE=$?
 
-        # ── Structured outputs (second call — same URL, result is fast) ────
-        JSON=$(node "$CLI" "$TARGET_URL" --json 2>/dev/null)
-        SCORE=$(echo "$JSON" | jq -r '.pulseScore.overall')
-        GRADE=$(echo "$JSON" | jq -r '.pulseScore.grade')
+        SCORE=$(jq -r '.pulseScore.overall' "$JSON_FILE")
+        GRADE=$(jq -r '.pulseScore.grade'   "$JSON_FILE")
         PASSED=$([ $EXIT_CODE -eq 0 ] && echo "true" || echo "false")
 
         echo "score=$SCORE"   >> "$GITHUB_OUTPUT"
         echo "grade=$GRADE"   >> "$GITHUB_OUTPUT"
         echo "passed=$PASSED" >> "$GITHUB_OUTPUT"
+
+        rm -f "$JSON_FILE"
 
         # Propagate the CLI exit code so the step fails when score < threshold
         exit $EXIT_CODE

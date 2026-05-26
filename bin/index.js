@@ -208,6 +208,7 @@ program
   .argument('<url>', 'Target URL to audit (http:// or https://)')
   .option('-t, --threshold <number>', 'Minimum acceptable Pulse Score (0–100)', '70')
   .option('--json', 'Output raw JSON (pipe-friendly for scripting)')
+  .option('--json-out <file>', 'Write JSON result to a file while still showing the human-readable report')
   .action(async (url, options) => {
     const threshold = parseInt(options.threshold, 10);
 
@@ -270,6 +271,10 @@ program
       console.log(JSON.stringify(result, null, 2));
     } else {
       render(url, result, threshold);
+      if (options.jsonOut) {
+        const { writeFileSync } = await import('fs');
+        writeFileSync(options.jsonOut, JSON.stringify(result, null, 2));
+      }
     }
 
     process.exit(pulseScore.overall >= threshold ? 0 : 1);
