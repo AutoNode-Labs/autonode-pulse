@@ -1,11 +1,40 @@
 {
   "name": "autonode-pulse",
   "version": "2.0.0",
-  "description": "Enterprise-grade Architectural Auditing & LLM-Readiness Microservice",
+  "description": "Enterprise-grade Architectural Auditing & LLM-Readiness scanner — CLI, REST API, and GitHub Action",
   "type": "module",
+  "license": "MIT",
+  "author": "AutoNode Labs <contact@autonode.tech>",
+  "homepage": "https://pulse.autonode.tech",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/AutoNode-Labs/autonode-pulse.git"
+  },
+  "bugs": {
+    "url": "https://github.com/AutoNode-Labs/autonode-pulse/issues"
+  },
+  "keywords": [
+    "llm-readiness",
+    "seo-audit",
+    "security-headers",
+    "web-audit",
+    "technical-seo",
+    "cli",
+    "github-action",
+    "site-health",
+    "robots-txt",
+    "structured-data"
+  ],
   "engines": {
     "node": ">=18.0.0"
   },
+  "files": [
+    "bin/",
+    "src/",
+    "action.yml",
+    "README.md",
+    "LICENSE"
+  ],
   "bin": {
     "autonode-pulse": "./bin/index.js"
   },
