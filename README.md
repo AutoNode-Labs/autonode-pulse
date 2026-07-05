@@ -321,3 +321,6 @@ Redis is optional — the service logs a connection warning and continues withou
 ## License
 
 MIT — see [LICENSE](LICENSE).
+
+Built and maintained by [Oktay Ateş](https://autonode.tech)       
+  ([@ateoktay](https://github.com/ateoktay)).                     
